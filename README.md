@@ -23,7 +23,7 @@ To build the Rom
 
 from the projects root directory, with docker installed
 ```
-$ docker run --rm -v "$(pwd):/build" moparisthebest/altra64-rust-dev make
+$ docker run --rm -v "$HOME/.cargo/registry:/root/.cargo/registry" -v "$(pwd):/build" moparisthebest/altra64-rust-dev make
 ```
 If it all worked, you will find `OS64.v64` in the `bin` directory.
 

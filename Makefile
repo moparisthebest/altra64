@@ -19,9 +19,16 @@ OBJDIR = ./obj
 BINDIR = ./bin
 TOOLSDIR = ./tools
 
-LINK_FLAGS = -O1 -L$(ROOTDIR)/lib -L$(ROOTDIR)/mips64-elf/lib -ldragon -lmad -lyaml -lc -lm -ldragonsys -lnosys -L./rust/target/mips-nintendo64-none/release -laltra64 $(LIBS) -Tn64ld.x
+RUST_DIR = ./rust
+RUST_TARGET_DIR = target/mips-nintendo64-none/release
+RUST_FULL_TARGET_DIR = $(RUST_DIR)/$(RUST_TARGET_DIR)
+RUST_DEPS := $(wildcard $(RUST_DIR)/src/*) $(wildcard $(RUST_DIR)/Cargo.*)
+RUST_BIN_DEPS := $(RUST_DEPS) $(RUST_DIR)/mips-nintendo64-none.json
+RUST_H_DEPS   := $(RUST_DEPS) $(RUST_DIR)/cbindgen.toml
+
+LINK_FLAGS = -O1 -L$(ROOTDIR)/lib -L$(ROOTDIR)/mips64-elf/lib -ldragon -lmad -lyaml -lc -lm -ldragonsys -lnosys -L$(RUST_FULL_TARGET_DIR) -laltra64 $(LIBS) -Tn64ld.x
 PROG_NAME = OS64P
-CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 -O1 -I$(INCDIR) -I$(ROOTDIR)/include -I$(ROOTDIR)/mips64-elf/include -I./rust/target/mips-nintendo64-none/release -lpthread -lrt -D_REENTRANT -DUSE_TRUETYPE $(SET_DEBUG)
+CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 -O1 -I$(INCDIR) -I$(ROOTDIR)/include -I$(ROOTDIR)/mips64-elf/include -I$(RUST_FULL_TARGET_DIR) -lpthread -lrt -D_REENTRANT -DUSE_TRUETYPE $(SET_DEBUG)
 ASFLAGS = -mtune=vr4300 -march=vr4300
 CC = $(GCCN64PREFIX)gcc
 AS = $(GCCN64PREFIX)as
@@ -31,23 +38,23 @@ OBJCOPY = $(GCCN64PREFIX)objcopy
 SOURCES := $(wildcard $(SRCDIR)/*.c)
 OBJECTS = $(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 
-$(PROG_NAME).v64: $ $(PROG_NAME).elf $(PROG_NAME).dfs
+$(PROG_NAME).v64: $(PROG_NAME).elf $(PROG_NAME).dfs
 	$(OBJCOPY) $(BINDIR)/$(PROG_NAME).elf $(BINDIR)/$(PROG_NAME).bin -O binary
 	rm -f $(BINDIR)/$(PROG_NAME).v64
 	$(N64TOOL) -l 4M -t $(HEADERTITLE) -h $(RESDIR)/$(HEADERNAME) -o $(BINDIR)/$(PROG_NAME).v64 $(BINDIR)/$(PROG_NAME).bin -s 1M $(BINDIR)/$(PROG_NAME).dfs
 	$(CHKSUM64PATH) $(BINDIR)/$(PROG_NAME).v64
 
-./rust/target/mips-nintendo64-none/release/libaltra64.a:
-	cd rust && cargo build --release --verbose --target mips-nintendo64-none.json -Z build-std=core
+$(RUST_FULL_TARGET_DIR)/libaltra64.a: $(RUST_BIN_DEPS)
+	cd $(RUST_DIR) && cargo build --release --verbose --target mips-nintendo64-none.json -Z build-std=core
 
-./rust/target/mips-nintendo64-none/release/altra64.h:
-	cd rust && cbindgen -o ./target/mips-nintendo64-none/release/altra64.h
+$(RUST_FULL_TARGET_DIR)/altra64.h: $(RUST_H_DEPS)
+	cd $(RUST_DIR) && cbindgen -o $(RUST_TARGET_DIR)/altra64.h
 
-$(PROG_NAME).elf : $(OBJECTS) ./rust/target/mips-nintendo64-none/release/libaltra64.a
+$(PROG_NAME).elf : $(OBJECTS) $(RUST_FULL_TARGET_DIR)/libaltra64.a
 	@mkdir -p $(BINDIR)
 	$(LD) -o $(BINDIR)/$(PROG_NAME).elf $(OBJECTS) $(LINK_FLAGS)
 
-$(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c ./rust/target/mips-nintendo64-none/release/altra64.h
+$(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c $(RUST_FULL_TARGET_DIR)/altra64.h
 	@mkdir -p $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
