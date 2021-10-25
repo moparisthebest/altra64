@@ -45,10 +45,10 @@ $(PROG_NAME).v64: $(PROG_NAME).elf $(PROG_NAME).dfs
 	$(CHKSUM64PATH) $(PROG_NAME).v64
 
 $(RUST_FULL_TARGET_DIR)/libaltra64.a: $(RUST_BIN_DEPS)
-	cd $(RUST_DIR) && cargo build --release --verbose --target mips-nintendo64-none.json -Z build-std=core
+	cd $(RUST_DIR) && cargo build --release --verbose --target mips-nintendo64-none.json -Z build-std=core && touch $(RUST_TARGET_DIR)/libaltra64.a
 
 $(RUST_FULL_TARGET_DIR)/altra64.h: $(RUST_H_DEPS)
-	cd $(RUST_DIR) && cbindgen -o $(RUST_TARGET_DIR)/altra64.h
+	cd $(RUST_DIR) && cbindgen -o $(RUST_TARGET_DIR)/altra64.h && touch $(RUST_TARGET_DIR)/altra64.h
 
 $(PROG_NAME).elf : $(OBJECTS) $(RUST_FULL_TARGET_DIR)/libaltra64.a
 	@mkdir -p $(BINDIR)
