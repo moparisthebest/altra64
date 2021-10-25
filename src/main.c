@@ -58,6 +58,10 @@
 
 #define MAX_LIST 20
 
+uint8_t get_c_u8(void) {
+    return 20;
+}
+
 struct glyph
 {
     int xoff;
