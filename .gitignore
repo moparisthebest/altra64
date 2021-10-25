@@ -4,6 +4,7 @@
 *.o
 *.bin
 *.dfs
+*/target/
 
 ## OSX junk
 .DS_Store

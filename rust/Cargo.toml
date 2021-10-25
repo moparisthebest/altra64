@@ -1,0 +1,18 @@
+[package]
+name = "altra64"
+version = "0.1.0"
+authors = ["moparisthebest <admin@moparisthebest.com>"]
+
+# the profile used for `cargo build`
+[profile.dev]
+panic = "abort" # disable stack unwinding on panic
+lto = "off"
+
+# the profile used for `cargo build --release`
+[profile.release]
+panic = "abort" # disable stack unwinding on panic
+lto = "off"
+
+[lib]
+name = "altra64"
+crate-type = ["staticlib"]

@@ -19,9 +19,9 @@ OBJDIR = ./obj
 BINDIR = ./bin
 TOOLSDIR = ./tools
 
-LINK_FLAGS = -O1 -L$(ROOTDIR)/lib -L$(ROOTDIR)/mips64-elf/lib -ldragon -lmad -lyaml -lc -lm -ldragonsys -lnosys $(LIBS) -Tn64ld.x
+LINK_FLAGS = -O1 -L$(ROOTDIR)/lib -L$(ROOTDIR)/mips64-elf/lib -ldragon -lmad -lyaml -lc -lm -ldragonsys -lnosys -L./rust/target/mips-nintendo64-none/release -laltra64 $(LIBS) -Tn64ld.x
 PROG_NAME = OS64P
-CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 -O1 -I$(INCDIR) -I$(ROOTDIR)/include -I$(ROOTDIR)/mips64-elf/include -lpthread -lrt -D_REENTRANT -DUSE_TRUETYPE $(SET_DEBUG)
+CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 -O1 -I$(INCDIR) -I$(ROOTDIR)/include -I$(ROOTDIR)/mips64-elf/include -I./rust/target/mips-nintendo64-none/release -lpthread -lrt -D_REENTRANT -DUSE_TRUETYPE $(SET_DEBUG)
 ASFLAGS = -mtune=vr4300 -march=vr4300
 CC = $(GCCN64PREFIX)gcc
 AS = $(GCCN64PREFIX)as
@@ -37,11 +37,17 @@ $(PROG_NAME).v64: $ $(PROG_NAME).elf $(PROG_NAME).dfs
 	$(N64TOOL) -l 4M -t $(HEADERTITLE) -h $(RESDIR)/$(HEADERNAME) -o $(BINDIR)/$(PROG_NAME).v64 $(BINDIR)/$(PROG_NAME).bin -s 1M $(BINDIR)/$(PROG_NAME).dfs
 	$(CHKSUM64PATH) $(BINDIR)/$(PROG_NAME).v64
 
-$(PROG_NAME).elf : $(OBJECTS)
+./rust/target/mips-nintendo64-none/release/libaltra64.a:
+	cd rust && cargo build --release --verbose --target mips-nintendo64-none.json -Z build-std=core
+
+./rust/target/mips-nintendo64-none/release/altra64.h:
+	cd rust && cbindgen -o ./target/mips-nintendo64-none/release/altra64.h
+
+$(PROG_NAME).elf : $(OBJECTS) ./rust/target/mips-nintendo64-none/release/libaltra64.a
 	@mkdir -p $(BINDIR)
 	$(LD) -o $(BINDIR)/$(PROG_NAME).elf $(OBJECTS) $(LINK_FLAGS)
 
-$(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c
+$(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c ./rust/target/mips-nintendo64-none/release/altra64.h
 	@mkdir -p $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -59,3 +65,4 @@ debug: SET_DEBUG=-DDEBUG
 
 clean:
 	rm -f $(BINDIR)/*.v64 $(BINDIR)/*.elf $(OBJDIR)/*.o $(BINDIR)/*.bin $(BINDIR)/*.dfs
+	rm -rf ./rust/target

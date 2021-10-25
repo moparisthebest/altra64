@@ -40,6 +40,8 @@
 // YAML parser
 #include <yaml.h>
 
+#include <altra64.h>
+
 #include "constants.h"
 #include "debug.h"
 #include "mem.h"
@@ -1751,9 +1753,9 @@ int saveTypeToSd(display_context_t disp, char *rom_name, int stype)
     if (result == FR_OK)
     {
         //for savegame
-        uint8_t cartsave_data[size]; //TODO: bring back old initialisation if this doesn't work
-
-
+        uint8_t cartsave_data[size];
+        // zero the memory so we can detect+abort if we can't get a save from the cart
+        memset(cartsave_data, 0, size * sizeof(cartsave_data[0]));
     
         TRACEF(disp, "cartsave_data=%p", &cartsave_data);
     

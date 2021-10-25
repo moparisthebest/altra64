@@ -14,7 +14,7 @@ The original version overwrote 1 save file per game on system reset, but if you 
 
 If you want to build the menu, you need an n64 toolchain. This is terrible to build, I ended up creating a Dockerfile in the docker folder, instructions included in it.
 
-Or if you trust me, you can use the one I built and pushed to docker hub, [moparisthebest/altra64-dev](https://hub.docker.com/r/moparisthebest/altra64-dev)
+Or if you trust me, you can use the one I built and pushed to docker hub, [moparisthebest/altra64-rust-dev](https://hub.docker.com/r/moparisthebest/altra64-rust-dev)
 
 
 ### Build `Altra64`
@@ -23,7 +23,7 @@ To build the Rom
 
 from the projects root directory, with docker installed
 ```
-$ docker run --rm -v "$(pwd):/build" moparisthebest/altra64-dev make
+$ docker run --rm -v "$(pwd):/build" moparisthebest/altra64-rust-dev make
 ```
 If it all worked, you will find `OS64.v64` in the `bin` directory.
 
@@ -34,7 +34,7 @@ Finally, we can clean the build objects from the project
 
 from the projects root directory
 ```
-$ docker run --rm -v "$(pwd):/build" moparisthebest/altra64-dev make clean
+$ docker run --rm -v "$(pwd):/build" moparisthebest/altra64-rust-dev make clean
 ```
 
 Enjoy!

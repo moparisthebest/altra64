@@ -1,0 +1,25 @@
+{
+  "arch": "mips",
+  "cpu": "mips3",
+  "data-layout": "E-m:m-p:64:64-i8:8:32-i16:16:32-i64:64-n64-S64",
+  "disable-redzone": true,
+  "env": "unknown",
+  "executables": true,
+  "features": "+mips3,+gp64,+noabicalls",
+  "linker": "rust-lld",
+  "linker-flavor": "ld.lld",
+  "llvm-target": "mips-unknown-unknown",
+  "llvm-abiname": "n64",
+  "os": "none",
+  "panic-strategy": "abort",
+  "pre-link-args": {
+    "ld.lld": [
+      "--script={}"
+    ]
+  },
+  "relocation-model": "static",
+  "target-c-int-width": "64",
+  "target-endian": "big",
+  "target-pointer-width": "64",
+  "vendor": "nintendo64"
+}
