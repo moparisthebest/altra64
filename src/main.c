@@ -37,10 +37,13 @@
 #include "sound.h"
 #include "mp3.h"
 
+#ifdef USE_YAML
 // YAML parser
 #include <yaml.h>
-
+#else
 #include <altra64.h>
+#endif /* USE_YAML */
+
 
 #include "constants.h"
 #include "debug.h"
@@ -2028,77 +2031,26 @@ void readSDcard(display_context_t disp, char *directory)
     display_dir(list, cursor, page, MAX_LIST, count, disp);
 }
 
-/*
- * Returns two cheat lists:
- * - One for the "at boot" cheats
- * - Another for the "in-game" cheats
- */
-int readCheatFile(TCHAR *filename, u32 *cheat_lists[2])
-{
+#ifdef USE_YAML
+int parse_cheats_yaml(char *cheatfile, u32 *list1, u32 *list2) {
+    
     // YAML parser
     yaml_parser_t parser;
     yaml_event_t event;
-
+    
     // State for YAML parser
     int is_code = 0;
     int code_on = 1;
     int done = 0;
-    u32 *list1;
-    u32 *list2;
-    char *next;
-
-    int repeater = 0;
     u32 address;
     u32 value;
-
-    yaml_parser_initialize(&parser);
-
-
-    FRESULT result;
-    FIL file;
-    UINT bytesread;
-    result = f_open(&file, filename, FA_READ);
-
-    if (result == FR_OK)
-    {
-        int fsize = f_size(&file);
-
-        char *cheatfile = malloc(fsize);
-        if (!cheatfile)
-        {
-            return -2; // Out of memory
-        }
     
-        /*
-         * Size of the cheat list can never be more than half the size of the YAML
-         * Minimum YAML example:
-         *   A:-80001234 FFFF
-         * Which is exactly 16 bytes.
-         * The cheat list in this case fits into exactly 8 bytes (2 words):
-         *   0x80001234, 0x0000FFFF
-         */
-        list1 = calloc(1, fsize + 2 * sizeof(u32)); // Plus 2 words to be safe
-        if (!list1)
-        {
-            // Free
-            free(cheatfile);
-            return -2; // Out of memory
-        }
-        list2 = &list1[fsize / sizeof(u32) / 2];
-        cheat_lists[0] = list1;
-        cheat_lists[1] = list2;
-
-        result =
-        f_read (
-            &file,        /* [IN] File object */
-            cheatfile,  /* [OUT] Buffer to store read data */
-            fsize,         /* [IN] Number of bytes to read */
-            &bytesread    /* [OUT] Number of bytes read */
-        );
-
-        f_close(&file);
-
-        yaml_parser_set_input_string(&parser, cheatfile, strlen(cheatfile));
+    char *next;
+    
+    int repeater = 0;
+    
+    yaml_parser_initialize(&parser);
+    yaml_parser_set_input_string(&parser, cheatfile, strlen(cheatfile));
         
             do
             {
@@ -2106,12 +2058,7 @@ int readCheatFile(TCHAR *filename, u32 *cheat_lists[2])
                 {
                     // Free
                     yaml_parser_delete(&parser);
-                    yaml_event_delete(&event);
-                    free(cheatfile);
-                    free(cheat_lists[0]);
-                    cheat_lists[0] = 0;
-                    cheat_lists[1] = 0;
-        
+                    yaml_event_delete(&event);        
                     return -3; // Parse error
                 }
         
@@ -2223,7 +2170,84 @@ int readCheatFile(TCHAR *filename, u32 *cheat_lists[2])
         
             // Free
             yaml_parser_delete(&parser);
+            
+            return repeater;
+}
+#endif /* USE_YAML */
+
+/*
+ * Returns two cheat lists:
+ * - One for the "at boot" cheats
+ * - Another for the "in-game" cheats
+ */
+int readCheatFile(TCHAR *filename, u32 *cheat_lists[2])
+{
+    u32 *list1;
+    u32 *list2;
+
+    int repeater = 0;
+
+    FRESULT result;
+    FIL file;
+    UINT bytesread;
+    result = f_open(&file, filename, FA_READ);
+
+    if (result == FR_OK)
+    {
+        int fsize = f_size(&file);
+
+        char *cheatfile = malloc(fsize);
+        if (!cheatfile)
+        {
+            return -2; // Out of memory
+        }
+    
+        /*
+         * Size of the cheat list can never be more than half the size of the YAML
+         * Minimum YAML example:
+         *   A:-80001234 FFFF
+         * Which is exactly 16 bytes.
+         * The cheat list in this case fits into exactly 8 bytes (2 words):
+         *   0x80001234, 0x0000FFFF
+         */
+        size_t both_list_sizes = fsize + 2 * sizeof(u32);
+        list1 = calloc(1, both_list_sizes); // Plus 2 words to be safe
+        if (!list1)
+        {
+            // Free
             free(cheatfile);
+            return -2; // Out of memory
+        }
+        size_t list2_size = fsize / sizeof(u32) / 2;
+        list2 = &list1[list2_size];
+        cheat_lists[0] = list1;
+        cheat_lists[1] = list2;
+
+        result =
+        f_read (
+            &file,        /* [IN] File object */
+            cheatfile,  /* [OUT] Buffer to store read data */
+            fsize,         /* [IN] Number of bytes to read */
+            &bytesread    /* [OUT] Number of bytes read */
+        );
+
+        f_close(&file);
+
+#ifdef USE_YAML
+            repeater = parse_cheats_yaml(cheatfile, list1, list2);
+#else
+            // use rust
+            size_t list1_size = both_list_sizes - list2_size;
+            repeater = parse_cheats_ffi(cheatfile, fsize, list1, list1_size, list2, list2_size);
+#endif /* USE_YAML */
+            
+            free(cheatfile);
+            if (repeater != 0) {
+                // this is what original yaml code did
+                free(cheat_lists[0]);
+                cheat_lists[0] = 0;
+                cheat_lists[1] = 0;
+            }
         
             return repeater; // Ok or repeater error
 

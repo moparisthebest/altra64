@@ -2,8 +2,6 @@
 #include <libdragon.h>
 #include <stdio.h>
 
-#include <altra64.h>
-
 #include "types.h"
 #include "menu.h"
 #include "version.h"
@@ -16,7 +14,7 @@ void menu_about(display_context_t disp)
     char version_str[32];
     char firmware_str[32];
 
-    sprintf(version_str, "Altra64 %d: v%s", get_rust_u8(), Altra64_GetVersionString());
+    sprintf(version_str, "Altra64: v%s", Altra64_GetVersionString());
     printText(version_str, 9, 8, disp);
     sprintf(firmware_str, "ED64 firmware: v%03x", evd_getFirmVersion());
     printText(firmware_str, 9, -1, disp);

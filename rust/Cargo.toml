@@ -2,6 +2,13 @@
 name = "altra64"
 version = "0.1.0"
 authors = ["moparisthebest <admin@moparisthebest.com>"]
+edition = "2018"
+
+[dependencies]
+#libc = {version = "0.2", default-features = false}
+#no-std-compat = { version = "0.4.1", features = [ "alloc" ] }
+#libdragon-bindings = { git = "https://github.com/DagothBob/libdragon-bindings" }
+#cstr_core = {version = "0.2", default-features = false}
 
 # the profile used for `cargo build`
 [profile.dev]

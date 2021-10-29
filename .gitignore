@@ -18,3 +18,4 @@
 *properties.json
 /.vs
 /.vscode
+*/.idea/

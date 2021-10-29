@@ -26,9 +26,17 @@ RUST_DEPS := $(wildcard $(RUST_DIR)/src/*) $(wildcard $(RUST_DIR)/Cargo.*)
 RUST_BIN_DEPS := $(RUST_DEPS) $(RUST_DIR)/mips-nintendo64-none.json
 RUST_H_DEPS   := $(RUST_DEPS) $(RUST_DIR)/cbindgen.toml
 
-LINK_FLAGS = -O1 -L$(ROOTDIR)/lib -L$(ROOTDIR)/mips64-elf/lib -ldragon -lmad -lyaml -lc -lm -ldragonsys -lnosys -L$(RUST_FULL_TARGET_DIR) -laltra64 $(LIBS) -Tn64ld.x
-PROG_NAME = $(BINDIR)/OS64P
 CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 -O1 -I$(INCDIR) -I$(ROOTDIR)/include -I$(ROOTDIR)/mips64-elf/include -I$(RUST_FULL_TARGET_DIR) -lpthread -lrt -D_REENTRANT -DUSE_TRUETYPE $(SET_DEBUG)
+
+ifdef USE_YAML
+CFLAGS += -DUSE_YAML
+LIBS += -lyaml
+else
+LIBS += -laltra64
+endif
+
+LINK_FLAGS = -O1 -L$(ROOTDIR)/lib -L$(ROOTDIR)/mips64-elf/lib -L$(RUST_FULL_TARGET_DIR) -ldragon -lmad $(LIBS) -lc -lm -ldragonsys -lnosys -Tn64ld.x
+PROG_NAME = $(BINDIR)/OS64P
 ASFLAGS = -mtune=vr4300 -march=vr4300
 CC = $(GCCN64PREFIX)gcc
 AS = $(GCCN64PREFIX)as
