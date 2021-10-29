@@ -32,8 +32,8 @@ ifdef USE_YAML
 CFLAGS += -DUSE_YAML
 LIBS += -lyaml
 else
-LIBS += -laltra64
 endif
+LIBS += -laltra64
 
 LINK_FLAGS = -O1 -L$(ROOTDIR)/lib -L$(ROOTDIR)/mips64-elf/lib -L$(RUST_FULL_TARGET_DIR) -ldragon -lmad $(LIBS) -lc -lm -ldragonsys -lnosys -Tn64ld.x
 PROG_NAME = $(BINDIR)/OS64P

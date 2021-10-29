@@ -41,9 +41,9 @@
 // YAML parser
 #include <yaml.h>
 #else
-#include <altra64.h>
 #endif /* USE_YAML */
 
+#include <altra64.h>
 
 #include "constants.h"
 #include "debug.h"
@@ -257,6 +257,50 @@ int count = 0;
 int page = 0;
 int cursor = 0;
 direntry_t *list;
+
+display_context_t global_disp_ctx;
+
+void screen_text(u8 *msg) {
+    printText(msg, 3, -1, global_disp_ctx);
+    display_show(global_disp_ctx);
+    sleep(1000);
+}
+
+void screen_text_num(size_t num) {
+    char num_str[64];
+
+    sprintf(num_str, "dbg: %u", num);
+    screen_text(num_str);
+}
+
+void screen_text_ptr(size_t ptr) {
+    u8 *msg = (u8*)ptr;
+    screen_text(msg);
+}
+
+void call_test(size_t num) {
+    screen_text_num(num);
+}
+/*
+00006644 <call_test>:
+    6644:       27bdffd8        addiu   sp,sp,-40
+    6648:       ffbf0020        sd      ra,32(sp)
+    664c:       0c000000        jal     0 <ttULONG>
+    6650:       00000000        nop
+    6654:       dfbf0020        ld      ra,32(sp)
+    6658:       03e00008        jr      ra
+    665c:       27bd0028        addiu   sp,sp,40
+*/
+
+void call_test_bla() {
+    call_test(5);
+}
+
+void test_c_print() {
+    screen_text("c rust test");
+    screen_text_num(5);
+    screen_text("c rust test2");
+}
 
 int filesize(FILE *pFile)
 {
@@ -2191,6 +2235,11 @@ int readCheatFile(TCHAR *filename, u32 *cheat_lists[2])
     FIL file;
     UINT bytesread;
     result = f_open(&file, filename, FA_READ);
+    
+    screen_text("in readCheatFile");
+    screen_text_num(0xffffffffffffffff);
+    test_rust_print();
+    screen_text("called rust");
 
     if (result == FR_OK)
     {
@@ -2238,7 +2287,7 @@ int readCheatFile(TCHAR *filename, u32 *cheat_lists[2])
 #else
             // use rust
             size_t list1_size = both_list_sizes - list2_size;
-            repeater = parse_cheats_ffi(cheatfile, fsize, list1, list1_size, list2, list2_size);
+            repeater = parse_cheats_ffi((size_t)cheatfile, fsize, (size_t)list1, list1_size, (size_t)list2, list2_size);
 #endif /* USE_YAML */
             
             free(cheatfile);
@@ -2272,10 +2321,12 @@ void bootRom(display_context_t disp, int silent)
             char cheat_filename[64];
             sprintf(cheat_filename, "/"ED64_FIRMWARE_PATH"/CHEATS/%s.yml", rom_filename);
 
+            global_disp_ctx = disp;
             int ok = readCheatFile(cheat_filename, cheat_lists);
             if (ok == 0)
             {
                 printText("cheats found...", 3, -1, disp);
+                sleep(10000);
             }
             else
             {
@@ -4589,6 +4640,59 @@ int main(void)
 
         drawBg(disp);           //new
         drawBoxNumber(disp, 1); //new
+        
+        
+        
+        /*
+        */
+        global_disp_ctx = disp;
+        screen_text("in MAIN");
+        screen_text_num(SIZE_MAX);
+        screen_text("in MAIN2");
+        screen_text_num((size_t)-1);
+        screen_text("in MAIN3");
+        screen_text_num(0xffffffffffffffff);
+        test_rust_print();
+        screen_text_ptr((size_t)"called rust");
+        rust_call_test(SIZE_MAX);
+        screen_text_ptr((size_t)"called rust2");
+        char* woot = "wootwootwootwootwootwootwootwoot";
+        size_t fsize = 32;
+        
+        //u8 repeater = rust_call_test_ptr((size_t) woot);
+        
+        /*
+                                       */
+        u32 *list1;
+        u32 *list2;
+        size_t both_list_sizes = fsize + 2 * sizeof(u32);
+        list1 = calloc(1, both_list_sizes); // Plus 2 words to be safe
+        if (!list1)
+        {
+            screen_text("oom");
+            while(true) { sleep(1000); }
+        }
+        size_t list2_size = fsize / sizeof(u32) / 2;
+        list2 = &list1[list2_size];
+        //cheat_lists[0] = list1;
+        //cheat_lists[1] = list2;
+        
+        size_t list1_size = both_list_sizes - list2_size;
+        
+        screen_text_num(list1_size);
+        screen_text_num(list2_size);
+        screen_text_ptr((size_t)"called rust2.5");
+        
+        u8 repeater = parse_cheats_ffi((size_t)woot, fsize
+                                       , (size_t)list1, list1_size
+                                       , (size_t)list2, list2_size
+                                       );
+        
+        
+        screen_text("called rust3");
+        screen_text(woot);
+        screen_text("called rust4");
+        while(true) { sleep(1000); }
 
         uint32_t *buffer = (uint32_t *)__get_buffer(disp); //fg disp = 2
 

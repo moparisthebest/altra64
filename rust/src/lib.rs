@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(dead_code,unused_variables)]
 
 use core::slice;
 use core::iter::Iterator;
@@ -111,6 +112,8 @@ impl<T: PartialEq> SliceSubsequence<T> for &[T] {
     }
 }
 
+/*
+// for some reason, passing actual pointers like this freezes the n64
 #[no_mangle]
 pub extern "C" fn parse_cheats_ffi(
     cheat_file: *mut u8, cheat_file_len: usize,
@@ -123,16 +126,53 @@ pub extern "C" fn parse_cheats_ffi(
 
     parse_cheats(cheat_file, boot_cheats, in_game_cheats)
 }
+*/
+
+// in C world, usize is actually u32, no idea why but that's a problem for another day...
+// but if we put u32 here it crashes, can only send usize
+#[no_mangle]
+pub extern "C" fn parse_cheats_ffi(
+    cheat_file: usize, cheat_file_len: usize,
+    boot_cheats: usize, boot_cheats_len: usize,
+    in_game_cheats: usize, in_game_cheats_len: usize,
+) -> u8 {
+
+/*
+        unsafe {
+        let cheat_file = cheat_file as *mut u8;
+        let cheat_file = slice::from_raw_parts_mut(cheat_file, 4);
+        cheat_file[1] = b'a';
+        0
+        }
+*/
+    //unsafe { screen_text_ptr(b"from rust woot" as *const u8 as u32); }
+
+    //let cheat_file = unsafe { slice::from_raw_parts(cheat_file as *const u8, cheat_file_len as usize) };
+    let cheat_file = unsafe { slice::from_raw_parts_mut(cheat_file as *mut u8, cheat_file_len as usize) };
+    let boot_cheats = unsafe { slice::from_raw_parts_mut(boot_cheats as *mut u32, boot_cheats_len as usize) };
+    let in_game_cheats = unsafe { slice::from_raw_parts_mut(in_game_cheats as *mut u32, in_game_cheats_len as usize) };
+    
+    dbg(100);
+    
+    //cheat_file[1] = b'a';
+    
+    //0
+
+    parse_cheats(cheat_file, boot_cheats, in_game_cheats)
+}
 
 const SUCCESS: u8 = 0;
 const INVALID_CODE_LINE: u8 = 1;
 const INVALID_LINE: u8 = 2;
 
 pub fn parse_cheats(cheat_file: &[u8], boot_cheats: &mut [u32], in_game_cheats: &mut [u32]) -> u8 {
+    dbg(101);
     let mut repeater = false;
     let mut boot_cheats_idx = 0;
     let mut in_game_cheats_idx = 0;
+    dbg(102);
     for line in cheat_file.lines(b"\n") {
+        dbg(200);
         let line = line.trim(WHITESPACE);
         if line.is_empty() || line.starts_with(b"#") || line == b"---" {
             continue; // empty or comment or whatever the starting thing is
@@ -233,6 +273,7 @@ pub fn parse_cheats(cheat_file: &[u8], boot_cheats: &mut [u32], in_game_cheats: 
             return INVALID_LINE;
         }
     }
+    dbg(103);
     SUCCESS
 }
 
@@ -248,8 +289,53 @@ fn hex_to_u32(str: &[u8]) -> u32 {
     unsafe { strtoul(str.as_ptr(), null_mut(), 16) }
 }
 
+#[no_mangle]
+pub extern "C" fn test_rust_print() {
+    //unsafe { test_c_print(); }
+    //unsafe { screen_text_num(9); } 
+    // sent 18446744073709551515 = 4294967195 = FFFF_FF9B
+    // sent 0xffff_ffff_ffff_ffff = 4294967295 = FFFF_FFFF
+    unsafe { screen_text_num(0xffff_ffff_ffff_ffff); }
+    //unsafe { screen_text(b"rust test\0".as_ptr()); }
+}
+
+#[no_mangle]
+pub extern "C" fn rust_call_test(num: usize) {
+    unsafe { screen_text_num(num); }
+}
+
+#[no_mangle]
+pub extern "C" fn rust_call_test_ptr(num: usize) -> u8 {
+    unsafe {
+        let cheat_file = num as *mut u8;
+        let cheat_file = slice::from_raw_parts_mut(cheat_file, 4);
+        cheat_file[1] = b'a';
+        //screen_text_num(cheat_file[0].into());
+        0
+    }
+}
+
+fn dbg(num: usize) {
+    #[cfg(not(test))]
+    unsafe { screen_text_num(num); }
+    #[cfg(test)]
+    println!("dbg: {}", num);
+}
+
+/*
+#[no_mangle]
+pub extern "C" fn rust_call_test_bla() {
+    //rust_call_test(b"c rust test\0".as_ptr());
+    rust_call_test([99, 32, 114, 117, 115, 116, 32, 116, 101, 115, 116, 0].as_ptr());
+}
+*/
+
 extern "C" {
     fn strtoul(s: *const u8, endp: *mut *mut u8, base: i32) -> u32; // todo: is base i32 ?
+    fn screen_text(msg: *const u8);
+    fn screen_text_num(num: usize);
+    fn screen_text_ptr(ptr: u32);
+    fn test_c_print();
 }
 
 #[cfg(test)]
@@ -258,6 +344,7 @@ mod tests {
 
     #[test]
     fn test_hex_to_u32() {
+        println!("i: {:?}", b"c rust test\0");
         assert_eq!(hex_to_u32(b"0x09"), 9);
     }
 
@@ -353,5 +440,14 @@ In Health (ASM):
         assert_eq!(ok, SUCCESS);
         assert_eq!(boot_cheats, [0xF10004E4, 0x2400, 0xEE000000, 0x0000, 0, 0]);
         assert_eq!(in_game_cheats, [0x8138EDA0, 0x2400, 0, 0, 0, 0]);
+        
+        let cheats_file = &b"wootwootwootwootwootwootwootwoot\0"[..];
+        let cheats_file = &b"wootwootwootwootwootwootwootwoot"[..];
+        let mut boot_cheats = [0u32; 6];
+        let mut in_game_cheats = [0u32; 6];
+        let ok = parse_cheats(cheats_file, &mut boot_cheats, &mut in_game_cheats);
+        assert_eq!(ok, INVALID_LINE);
+        assert_eq!(boot_cheats, [0, 0, 0, 0, 0, 0]);
+        assert_eq!(in_game_cheats, [0, 0, 0, 0, 0, 0]);
     }
 }
